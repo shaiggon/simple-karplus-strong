@@ -10,7 +10,7 @@ The synth can be started with the command
 
     $ simple_karplus_strong <midi port>
 
-where <midi port> is optional. The default value for it is: hw:1,0,0. The available midi ports can be listed for example using [this](https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawportlist.c).
+where \<midi port\> is optional. The default value for it is: hw:1,0,0. The available midi ports can be listed for example using [this](https://ccrma.stanford.edu/~craig/articles/linuxmidi/alsa-1.0/alsarawportlist.c).
 
 The synth is exited by typing anything in the command line and pressing enter.
 
