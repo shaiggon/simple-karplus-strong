@@ -18,63 +18,6 @@
 jack_port_t* output_port[2];
 jack_client_t* client;
 
-class Osc {
-    public:
-        Osc(double fs_) {
-            phase = 0;
-            fs = fs_; // sampling freq
-            noteOn = false;
-        }
-        ~Osc() {
-        }
-        
-        double getNextSample(double freq) {
-            phase = fmod(freq*PI*2.0/fs + phase, PI*2.0);
-            return sin(phase);
-        }
-        
-        void resetPhase() {
-            phase = 0;
-        }
-        
-        void setNoteOn() {
-            noteOn = true;
-        }
-        
-        void setNoteOff(unsigned char note_) {
-            if(note_ == note)
-                noteOn = false;
-        }
-        
-        bool getNoteOn() {
-            return noteOn;
-        }
-        
-        void setNoteFreq(double f) {
-            noteFreq = f;
-        }
-
-        void setNote(unsigned char note_) {
-            note = note_;
-        }
-
-        unsigned char getNote() {
-            return note;
-        }
-        
-        double getNoteFreq() {
-            return noteFreq;
-        }
-        
-    private:
-        //std::vector<double> delayLine;
-        double phase;
-        double fs;
-        bool noteOn;
-        double noteFreq;
-        unsigned char note;
-};
-
 class KarplusStrong {
     public:
         KarplusStrong(int sampleRate) {
@@ -91,6 +34,7 @@ class KarplusStrong {
                 delayLine[i] = 0.0;
             }
         }
+
         ~KarplusStrong() {
         }
 
@@ -214,8 +158,7 @@ class MidiDevice {
             status = 0;
             int mode = SND_RAWMIDI_NONBLOCK;
             if ((status = snd_rawmidi_open(&midiIn, NULL, pn.c_str(), mode)) < 0) {
-                //errormessage("Problem opening MIDI input: %s", snd_strerror(status));
-                std::cout << "error discovered" << std::endl;
+                std::cout << "error discovered opening MIDI device" << std::endl;
                 exit(1);
             }
         }
@@ -238,15 +181,12 @@ class MidiDevice {
             return buffer;
         }
     private:
-        //std::string portName;
         snd_rawmidi_t* midiIn;
         unsigned char buffer[3];
         int status;
 };
 
 MidiDevice* md = NULL;
-Osc* osc = NULL;
-KarplusStrong* kps = NULL;
 PolyphonyManagerKPS* pm = NULL;
 
 int process(jack_nframes_t nframes, void *arg) {
@@ -259,34 +199,24 @@ int process(jack_nframes_t nframes, void *arg) {
     jack_default_audio_sample_t *out_left = (jack_default_audio_sample_t*)
                                 jack_port_get_buffer(output_port[1], nframes);
                                 
-    if(md != NULL && osc != NULL && kps != NULL && pm != NULL) {
+    if(md != NULL && pm != NULL) {
         midiBuffer = md->readBuffer();
         if(midiBuffer[0] == 0x90) {
             std::cout << (int)midiBuffer[2] << std::endl;
             if(midiBuffer[2] > 0) {
-                //osc->setNoteOn();
                 midiNote = midiBuffer[1];
                 double velocity = (double)midiBuffer[2]/127.0;
-                //osc->setNoteFreq( (a / 32.0) * (pow(2.0, (((double)midiNote - 9.0) / 12.0))) );
-                //osc->setNote(midiNote);
-                //kps->strikeString(midiNote, velocity);
                 pm->setNoteOn(midiNote, velocity);
                 std::cout << "note freq: " << (a / 32.0) * (pow(2.0, (((double)midiNote - 9.0) / 12.0))) << std::endl;
             } else {
                 midiNote = midiBuffer[1];
-                //osc->setNoteOff(midiNote);
-                //kps->setNoteOff(midiNote);
                 pm->setNoteOff(midiNote);
-                //osc->resetPhase();
             }
         }
     }
+
     for(unsigned int i = 0; i < nframes; i++) {
         double nextsmp = 0.0;
-        /*if(kps != NULL && kps->getNoteOn() == true) {
-            //nextsmp = osc->getNextSample(osc->getNoteFreq());
-            nextsmp = kps->getNextSample();
-        }*/
         if(pm != NULL) {
             nextsmp = pm->getNextSample();
         }
@@ -297,11 +227,9 @@ int process(jack_nframes_t nframes, void *arg) {
     return 0;
 }
 
-void jack_shutdown(void * arg) {
-    if(md != NULL && osc != NULL) {
+void jack_shutdown(void* arg) {
+    if(md != NULL && pm != NULL) {
         delete md;
-        delete osc;
-        delete kps;
         delete pm;
     }
     exit(1);
@@ -329,7 +257,7 @@ int set_jack() {
 }
 
 int main(int argc, char* argv[]) {
-    std::string midiDeviceString = "hw:2,0,0";
+    std::string midiDeviceString = "hw:1,0,0";
     if(argc > 1) {
         midiDeviceString = argv[1];
     }
@@ -338,17 +266,13 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     md = new MidiDevice(midiDeviceString);
-    osc = new Osc(44100);
-    kps = new KarplusStrong(44100);
-    pm = new PolyphonyManagerKPS(10, 44100);
+    pm = new PolyphonyManagerKPS(24, 44100);
     
     std::string exitstring;
     std::cin >> exitstring;
     jack_client_close(client);
     
     delete md;
-    delete osc;
-    delete kps;
     delete pm;
     
 }
