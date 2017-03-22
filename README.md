@@ -14,6 +14,8 @@ where <midi port> is optional. The default value for it is: hw:1,0,0. The availa
 
 The synth is exited by typing anything in the command line and pressing enter.
 
+Please note that you need to have JACK running with for example the [QjackCtl](https://qjackctl.sourceforge.io/) and to connect the output of the synth to your sound card output.
+
 ## Motivation
 
 This synthesizer was created for a learning diary for the Aalto University course Audio Signal Processing.
